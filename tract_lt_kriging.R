@@ -65,6 +65,7 @@ tmap_mode("view")
 n.row <- 100
 n.col <- 100
 
+#---- Simple kriging
 CA_kno_rast <- raster(ncol = n.col, nrow = n.row, ext = extent(CA_kno))
 CA_kno_rast <- fasterize(CA_kno, CA_kno_rast, field = "e0")
 qtm(CA_kno_rast)
@@ -86,3 +87,33 @@ rmsd
 msevar <- sum((ex.kriged$var1.sd - ex.kriged$se.e0)^2)/nrow(ex.kriged )
 msevar
 
+#---- Cokriging EX with median hh income and pct white
+# t <- load_variables(2014, "acs5", cache = T)
+list()
+CA_shp <- tidycensus::get_acs(geography = "tract", state = "CA", 
+                              variables = c("med_inc" = "B21004_001","tot_pop" =  "B01003_001", "tot_white"= "B02001_002"), 
+                              geometry = T, output = "wide")
+CA_shp <- left_join(CA_shp, CA_A, by = c("GEOID" = "Tract ID"))
+CA_shp %<>% rename(e0 = "e(0)",
+                   se.e0 = "se(e(0))")
+
+obj <- drop_tracts(CA_shp, 100)
+CA_kno <- obj$CA_kno
+CA_unk <- obj$CA_unk
+rm(obj)
+
+tmap_mode("view")
+n.row <- 100
+n.col <- 100
+
+CA_kno_rast <- raster(ncol = n.col, nrow = n.row, ext = extent(CA_kno))
+CA_kno %>% pivot_longer(cols = c(med_incE, med_incM, tot_popE, tot_popM, tot_whiteE, tot_whiteM, e0, se.e0))
+CA_kno_rast <- fasterize(CA_kno, CA_kno_rast, field = "e0")
+qtm(CA_kno_rast)
+CA_unk_pts <- CA_unk %>% st_centroid()
+ex.vgm <- variogram(layer~1 , rasterToPoints(CA_kno_rast, spatial = T), width = 10)
+ex.fit <- fit.variogram(ex.vgm, model=vgm("Sph"))
+plot(ex.vgm, ex.fit)
+ex.kriged <- krige(layer ~ med_incE + tot_whiteE/tot_popE, rasterToPoints(CA_kno_rast, spatial = T), CA_unk_pts, model=ex.fit)
+ex.kriged$var1.sd <- sqrt(ex.kriged$var1.var)
+ex.kriged
