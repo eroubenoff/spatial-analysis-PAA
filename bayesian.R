@@ -8,43 +8,15 @@ library(tidyverse)
 library(reshape2)
 library(tictoc)
 
+setwd("~/kriging_PAA")
+
 rm(list = ls())
 gc()
 
 
 #### Create PCs ####
 
-CA_1 <- read_csv("./data/CA_B_1.CSV")
-CA_2 <- read_csv("./data/CA_B_2.CSV") %>% mutate(TRACT2KX = as.numeric(TRACT2KX))
-CA <- bind_rows(CA_1, CA_2)
-rm(CA_1, CA_2)
-CA <- CA %>% 
-  mutate(mx = `nd(x)` / `nL(x)`)
-
-age.v <- c(0, 1, 5, 15, 25, 35, 45, 55, 65, 75, 85) 
-n.v   <- c(1, 4, 9, 9, 9, 9, 9, 9, 9, 9, NA)
-
-CA_mat <- CA %>%  
-  select(`Age Group`, `Tract ID`, mx) %>%
-  mutate(logmx = log(mx)) %>%
-  select( -mx) %>%
-  pivot_wider(names_from = `Tract ID`, values_from = logmx)  %>%
-  select(-`Age Group`) %>%
-  as.matrix() 
-
-# Drop infinite values 
-sum(sapply(CA_mat, is.infinite))
-
-# Pull out the three largest PCs
-pcs <- base::svd(CA_mat)$u[,1:3]
-
-ggplot(as_data_frame(pcs)) + 
-  geom_line(aes(x = age.v, y = V1), linetype = "solid") +
-  geom_line(aes(x = age.v, y = V2), linetype = "dashed") +
-  geom_line(aes(x = age.v, y = V3), linetype = "dotted") 
-
-rm(CA_mat)
-
+pcs <- as.matrix(read.csv("pcs.csv"))[,2:4]
 
 
 ##### Format Data ####
@@ -213,12 +185,15 @@ mod <- nimbleModel(code = code, name = 'mod', constants = constants,
 
 
 # In one step:
+tic()
 mcmc_out <- nimbleMCMC(code = mod,
            data = data,
            constants = constants,
            inits = inits,
            summary = T)
+toc()
 
+save(mcmc_out, file = paste0("./mcmc_runs/MCMC_OUT_", Sys.time(), ".RData"))
 
 
 
