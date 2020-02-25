@@ -1,0 +1,49 @@
+---
+title: "Bayesian Model"
+author: "Ethan Roubenoff"
+date: "2/24/2020"
+output: html_document
+---
+
+This document provides an overview of the Bayesian method adapated from Alexander
+et. al. for small area estimation.
+
+Data: 
+- LT quantities: nqx, lx, ndx, nLx, tx, ex, se(nqx), se(ex), mx. Radix: 10,000
+- tracts (t; hundreds per county) 
+- counties (c; dozens per state)
+- states (s; 50)
+- ages (a; 0, 1, 5, 15, 25, 35, 45, 55, 65, 75, 85+)
+
+Note: only one time period t and as such is eliminated from the model 
+
+PC's: two options.  Either determined empirically from the CDC data or from USAMD. 
+Will need to evaluate. 
+
+# Level 1: 
+Number of deaths between ages x and x+n for tract t in county c in state s at age x:
+$$
+d(x, n)_{t, c, s} \sim Poi(m(x)_{t, c, s} * L(x))
+$$
+
+$mx$ is a linear combination of the prinicipal components plus an error term 
+$$
+log(m(x)_{t, c, s}) = \sum_{i \in [1, 3]} \beta_{i, t, c, s} \cdot Y_{i, x} + u_{x, t, c, s}
+$$
+
+
+# Level 2:
+Coefficients $\beta$ are normally distributed
+$$
+\beta_{i, t, c, s} \sim N(\mu_{\beta_i}, \sigma^2_{\beta_i})
+$$
+Error terms are normally distributed
+$$
+u_{x, t, c, s} \sim N(0, \sigma^2_x)
+$$
+
+
+
+
+
+
