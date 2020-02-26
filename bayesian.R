@@ -13,6 +13,9 @@ setwd("~/kriging_PAA")
 rm(list = ls())
 gc()
 
+message("~~~~~~~~~~~~~~~~~~~~~Starting Run~~~~~~~~~~~~~~~~~~~~~~~~~~")
+message(Sys.time())
+message("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
 #### Create PCs ####
 
@@ -20,6 +23,8 @@ pcs <- as.matrix(read.csv("pcs.csv"))[,2:4]
 
 
 ##### Format Data ####
+age.v <- c(0, 1, 5, 15, 25, 35, 45, 55, 65, 75, 85)  # Ages we need
+n.v   <- c(1, 4, 9, 9, 9, 9, 9, 9, 9, 9, 9)
 CA_1 <- read_csv("./data/CA_B_1.CSV")
 CA_2 <- read_csv("./data/CA_B_2.CSV") %>% mutate(TRACT2KX = as.numeric(TRACT2KX))
 CA <- bind_rows(CA_1, CA_2)
@@ -51,7 +56,7 @@ CA <- CA %>% mutate(age = rep(age.v, nrow(CA)/11),
               ndx = as.numeric(ndx))
 
 # For testing: limit to the first 4 counties
-CA <- CA %>% filter(county %in% c(1, 3, 5, 7))
+# CA <- CA %>% filter(county %in% c(1, 3, 5, 7))
 
 # Go from tract numbers to tract index within county
 CA <- CA %>% mutate(county_r = county) %>%
@@ -172,8 +177,12 @@ inits <- list(
   mu = array(0, c(X, C, n.Tmax))
 )
 
+message("~~~~~~~~~~~~~~~~~~~~~Initializing~~~~~~~~~~~~~~~~~~~~~~~~~~")
+message(Sys.time())
+message("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+
 mod <- nimbleModel(code = code, name = 'mod', constants = constants,
-                         data = data, inits = inits)
+                         data = data, inits = inits, calculate = F, check = F)
 # mod$initializeInfo()
 # modMCMC <- buildMCMC(mod)
 # # For testing only
@@ -181,8 +190,12 @@ mod <- nimbleModel(code = code, name = 'mod', constants = constants,
 # Cmod <- compileNimble(mod)
 # CmodMCMC <- compileNimble(modMCMC, project = mod)
 # runMCMC_samples <- runMCMC(CmodMCMC, nburnin = 1000, niter = 10000)
-# monitors <- c("y.xta", "mu.xta", "mx.xta", "logmx.xta", "beta.ta", "u.xta")
 
+monitors <- c("mx", "u")
+
+message("~~~~~~~~~~~~~~~~~~~~~Running Chains~~~~~~~~~~~~~~~~~~~~~~~~")
+message(Sys.time())
+message("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 
 # In one step:
 tic()
@@ -190,6 +203,10 @@ mcmc_out <- nimbleMCMC(code = mod,
            data = data,
            constants = constants,
            inits = inits,
+           monitors = monitors,
+           nchains = 4,
+           nburnin = 2000,
+           check = F,
            summary = T)
 toc()
 
